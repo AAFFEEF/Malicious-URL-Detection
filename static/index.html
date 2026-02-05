@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Malicious URL Detector</title>
+    <style>
+        :root {
+            --primary-bg: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-color: #ffffff;
+            --accent-color: #0f3460;
+            --success-color: #2ecc71;
+            --danger-color: #e74c3c;
+            --button-grad: linear-gradient(45deg, #e94560, #d63384);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--primary-bg);
+            color: var(--text-color);
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .container {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 3rem;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(to right, #fff, #a5b4fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p.subtitle {
+            color: #a5b4fc;
+            margin-bottom: 2rem;
+            font-weight: 300;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 1.2rem;
+            padding-right: 3rem;
+            /* Make room for the clear button */
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            color: white;
+            font-size: 1.1rem;
+            outline: none;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        input[type="text"]:focus {
+            border-color: #e94560;
+            box-shadow: 0 0 15px rgba(233, 69, 96, 0.3);
+        }
+
+        .clear-btn {
+            position: absolute;
+            right: 15px;
+            cursor: pointer;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 1.2rem;
+            display: none;
+            /* Hidden by default */
+            transition: color 0.2s;
+        }
+
+        .clear-btn:hover {
+            color: #fff;
+        }
+
+        button {
+            background: var(--button-grad);
+            border: none;
+            padding: 1rem 2.5rem;
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            width: 100%;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(233, 69, 96, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .result-card {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            border-radius: 12px;
+            display: none;
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-safe {
+            background: rgba(46, 204, 113, 0.1);
+            border: 1px solid var(--success-color);
+            color: var(--success-color);
+        }
+
+        .result-danger {
+            background: rgba(231, 76, 60, 0.1);
+            border: 1px solid var(--danger-color);
+            color: var(--danger-color);
+        }
+
+        .result-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .result-prob {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .loader {
+            display: none;
+            border: 4px solid var(--glass-border);
+            border-top: 4px solid #e94560;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Toast Styles */
+        .toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: var(--danger-color);
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 16px;
+            position: fixed;
+            z-index: 1;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            font-size: 1rem;
+            opacity: 0;
+            transition: opacity 0.5s, bottom 0.5s;
+        }
+
+        .toast.show {
+            visibility: visible;
+            opacity: 1;
+            bottom: 50px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>URL Scanner</h1>
+        <p class="subtitle">Enter a website URL to detect potential threats using AI.</p>
+
+        <div class="input-group">
+            <input type="text" id="urlInput" placeholder="https://example.com" oninput="toggleClearBtn()" />
+            <span class="clear-btn" id="clearBtn" onclick="clearInput()">&#10005;</span>
+        </div>
+
+        <button onclick="checkUrl()">Scan Now</button>
+
+        <div class="loader" id="loader"></div>
+
+        <div id="result" class="result-card">
+            <div class="result-title" id="resultTitle">Safe</div>
+            <div class="result-prob" id="resultDesc">Probability: 0.00%</div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">Please enter a valid URL!</div>
+
+    <script>
+        function toggleClearBtn() {
+            const input = document.getElementById('urlInput');
+            const btn = document.getElementById('clearBtn');
+            if (input.value.length > 0) {
+                btn.style.display = 'block';
+            } else {
+                btn.style.display = 'none';
+            }
+        }
+
+        function clearInput() {
+            const input = document.getElementById('urlInput');
+            const resultDiv = document.getElementById('result');
+
+            input.value = '';
+            toggleClearBtn();
+            resultDiv.style.display = 'none';
+            input.focus();
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById("toast");
+            toast.innerText = message;
+            toast.className = "toast show";
+            setTimeout(function () { toast.className = toast.className.replace("show", ""); }, 3000);
+        }
+
+        async function checkUrl() {
+            const urlInput = document.getElementById('urlInput');
+            const resultDiv = document.getElementById('result');
+            const resultTitle = document.getElementById('resultTitle');
+            const resultDesc = document.getElementById('resultDesc');
+            const loader = document.getElementById('loader');
+
+            const url = urlInput.value.trim();
+
+            // Pop message if empty or invalid format
+            if (!url || !url.includes('.')) {
+                showToast("⚠️ Please enter a valid URL link!");
+                return;
+            }
+
+            // UI Reset
+            resultDiv.style.display = 'none';
+            loader.style.display = 'block';
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.detail || 'API Error');
+                }
+
+                const data = await response.json();
+
+                loader.style.display = 'none';
+                resultDiv.style.display = 'block';
+
+                // Display logic
+                const isMalicious = data.prediction === "MALICIOUS";
+                const probability = (data.malicious_probability * 100).toFixed(2);
+
+                if (isMalicious) {
+                    resultDiv.className = 'result-card result-danger';
+                    resultTitle.innerText = "🚨 MALICIOUS DETECTED";
+                    resultDesc.innerText = `Threat Confidence: ${probability}%`;
+                } else {
+                    resultDiv.className = 'result-card result-safe';
+                    resultTitle.innerText = "✅ LEGITIMATE SITE";
+                    resultDesc.innerText = `Safety Confidence: ${(100 - probability).toFixed(2)}%`;
+                }
+
+            } catch (error) {
+                console.error(error);
+                loader.style.display = 'none';
+                showToast(error.message || "Error connecting to server");
+            }
+        }
+    </script>
+</body>
+
+</html>
