@@ -4,11 +4,5 @@ scikit-learn
 fastapi
 uvicorn
 tldextract
-python-whois
 requests
-mlflow
-xgboost
-beautifulsoup4
-dnspython
-matplotlib
-seaborn
+joblib
